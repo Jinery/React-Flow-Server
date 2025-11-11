@@ -1,5 +1,6 @@
 package com.kychnoo.react_flow.service.authentification;
 
+import com.kychnoo.react_flow.exception.UsernameAlreadyExistsException;
 import com.kychnoo.react_flow.model.User;
 import com.kychnoo.react_flow.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,7 @@ public class AuthService {
 
     public User registerUser(String username, String password, String displayedName) {
         if(userRepository.findByUsername(username).isPresent()) {
-            throw new RuntimeException("Username already taken");
+            throw new UsernameAlreadyExistsException("Username already taken");
         }
 
         User newUser = User.builder()

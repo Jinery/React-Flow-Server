@@ -17,7 +17,10 @@ public class StateLog {
 
     private Long userId;
     private LocalDateTime timestamp;
+    @Column(name = "state_value")
     private String value;
+
+    @Column(name = "intensity")
     private Integer intensity;
 
 }

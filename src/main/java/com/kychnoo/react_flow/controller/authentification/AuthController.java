@@ -2,10 +2,12 @@ package com.kychnoo.react_flow.controller.authentification;
 
 import com.kychnoo.react_flow.dto.request.authentication.AuthRequest;
 import com.kychnoo.react_flow.dto.response.authentication.AuthResponse;
+import com.kychnoo.react_flow.exception.UsernameAlreadyExistsException;
 import com.kychnoo.react_flow.model.User;
 import com.kychnoo.react_flow.model.details.CustomUserDetails;
 import com.kychnoo.react_flow.service.authentification.AuthService;
 import com.kychnoo.react_flow.util.JwtUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +20,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
+@Slf4j
 @Controller
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -36,13 +38,19 @@ public class AuthController {
     private AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public User register(@RequestBody AuthRequest request) {
-        return authService.registerUser(
-                request.getUsername(),
-                request.getPassword(),
-                request.getDisplayedName()
-        );
+    public ResponseEntity<?> register(@RequestBody AuthRequest request) {
+        try {
+            User user = authService.registerUser(
+                    request.getUsername(),
+                    request.getPassword(),
+                    request.getDisplayedName()
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(user);
+        } catch (UsernameAlreadyExistsException e) {
+            log.error("Registration error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(e.getMessage());
+        }
     }
 
     @PostMapping("/login")
