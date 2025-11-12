@@ -1,12 +1,17 @@
 package com.kychnoo.react_flow.controller;
 
+import com.kychnoo.react_flow.dto.request.logs.LogRequest;
 import com.kychnoo.react_flow.model.StateLog;
 import com.kychnoo.react_flow.repository.StateLogRepository;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,20 +23,31 @@ public class StateLogController {
     private StateLogRepository stateLogRepository;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public StateLog createLog(@RequestBody StateLog log) {
+    public ResponseEntity<StateLog> createLog(@RequestBody StateLog log) {
         if(log.getTimestamp() == null) {
             log.setTimestamp(LocalDateTime.now());
         }
-        return stateLogRepository.save(log);
+        StateLog savedLog = stateLogRepository.save(log); // Save log to database.
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(savedLog.getId())
+                .toUri(); // Generate created URI using current uri path and saved log id.
+
+        return ResponseEntity.created(location).body(savedLog);
     }
 
-    @GetMapping
-    public List<StateLog> getLogsGraph(
-            @RequestParam Long userId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end
-    ) {
-        return stateLogRepository.findByUserIdAndTimestampBetween(userId, start, end);
+    // Endpoint to get graph points as List.
+    @PostMapping("/graph")
+    public ResponseEntity<List<StateLog>> getLogsGraph(@RequestBody LogRequest request) {
+
+        // Get all params from request.
+        Long userId = request.getUserId();
+        LocalDateTime start = request.getStart();
+        LocalDateTime end = request.getEnd();
+
+        List<StateLog> logs = stateLogRepository.findByUserIdAndTimestampBetween(userId, start, end);
+        return ResponseEntity.ok(logs);
     }
 }
