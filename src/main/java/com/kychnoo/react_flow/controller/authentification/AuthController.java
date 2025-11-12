@@ -1,6 +1,7 @@
 package com.kychnoo.react_flow.controller.authentification;
 
 import com.kychnoo.react_flow.dto.request.authentication.AuthRequest;
+import com.kychnoo.react_flow.dto.response.ErrorResponse;
 import com.kychnoo.react_flow.dto.response.authentication.AuthResponse;
 import com.kychnoo.react_flow.exception.UsernameAlreadyExistsException;
 import com.kychnoo.react_flow.model.User;
@@ -9,6 +10,8 @@ import com.kychnoo.react_flow.service.authentification.AuthService;
 import com.kychnoo.react_flow.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +40,9 @@ public class AuthController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private MessageSource messageSource;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AuthRequest request) {
         try {
@@ -48,8 +54,20 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (UsernameAlreadyExistsException e) {
             log.error("Registration error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(e.getMessage());
+
+            String localizedMessage = messageSource.getMessage(
+                    "error.username.taken",
+                    null,
+                    LocaleContextHolder.getLocale()
+            );
+
+            ErrorResponse response = ErrorResponse.builder()
+                    .status(HttpStatus.CONFLICT.value())
+                    .error("Conflict")
+                    .message(localizedMessage)
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
     }
 
@@ -63,7 +81,19 @@ public class AuthController {
                     )
             );
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect username or password");
+            String localizedMessage = messageSource.getMessage(
+                    "error.bad.credentials",
+                    null,
+                    LocaleContextHolder.getLocale()
+            );
+
+            ErrorResponse response = ErrorResponse.builder()
+                    .status(HttpStatus.UNAUTHORIZED.value())
+                    .error("Unauthorized")
+                    .message(localizedMessage)
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
         final UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUsername());
